@@ -1,84 +1,114 @@
 /*
- * Program to perform automated measurements on all the stack from an AFM image, obtaining areas of each slice and HCFA
+ * Program to perform automated measurements on all the stack from an AFM image, obtaining areas, HCFA and porosity
  * 
- * Authors: Dr Laia Pasquina-Lemonche & Matthew Barker, University of Sheffield, UK, 
+ * Authors: Dr Laia Pasquina-Lemonche & Matthew J Barker, University of Sheffield, UK
  * 			
- * Date of Original: 12th May 2020
- * 
- * LATEST UPDATE: Automated batch processing to cycle through a full folder of stacks
- * Date: 25th November 2024
  */
 
 run("Close All");
+run("Clear Results");
 print("\\Clear");
+wlist=getList("window.titles");
+wlength=lengthOf(wlist);
 
-//Select the folder containing stacks and get list of stack folders
-print("Select the folder containing stacks");
-dir0 = getDirectory("Select folder containing stacks");
+for (i=0; i<wlength; i++) {
+	selectWindow(wlist[i]);
+	run("Close");
+}
+
+//Run initial pop-up window to get required inputs from user
+Dialog.create("");
+Dialog.addRadioButtonGroup("Are all of your images square?", newArray("Yes", "No"), 1, 2, "Yes");
+Dialog.show();
+
+square = Dialog.getRadioButton();
+
+Dialog.create("");
+Dialog.addDirectory("Select folder to process, THE SAME FOLDER YOU SELECTED FOR CODE 1", "");
+Dialog.addFile("Select .txt file containing depths in nm", "");
+if (square == "Yes"){
+	Dialog.addFile("Select .txt file containing xy size in nm", "");
+}
+if (square == "No"){
+	Dialog.addFile("Select .txt file containing x size in nm", "");
+	Dialog.addFile("Select .txt file containing y size in nm", "");
+}
+Dialog.addRadioButtonGroup("Save individual slice data?", newArray("No", "X0 Slice Only", "All"), 3, 1, "No");
+Dialog.show();
+
+dirMain = Dialog.getString();
+
+//Get list of stacks
+dir0 = dirMain + File.getName(dirMain) + "_Stacks" + File.separator;
 list0 = getFileList(dir0);
 
+depthtxt = Dialog.getString();
+xtxt = Dialog.getString();
+if (square == "No"){
+	ytxt = Dialog.getString();
+}
+
+saves = Dialog.getRadioButton();
+
 //Select .txt file of image depths (nm) and extract values into an array
-depthtxt=File.openDialog("Select .txt file containing depths");
 filestring=File.openAsString(depthtxt);
 rows=split(filestring, "\n");
 depths=newArray(rows.length);
 for(i=0; i<rows.length; i++){
-depths[i]=parseFloat(rows[i]);
+	depths[i]=parseFloat(rows[i]);
 }
 
-//Select .txt file of image depths (nm) and extract values into an array
-xytxt=File.openDialog("Select .txt file containing dimensions");
-filestring1=File.openAsString(xytxt);
+//Select .txt file of image x (nm) and extract values into an array
+filestring1=File.openAsString(xtxt);
 rows1=split(filestring1, "\n");
-xy=newArray(rows1.length);
+xs=newArray(rows1.length);
 for(i=0; i<rows1.length; i++){
-xy[i]=parseFloat(rows1[i]);
+	xs[i]=parseFloat(rows1[i]);
 }
 
-//Input size length of images (nm). All must be the same - can be made to accept a .txt file if requested. Lengths then converted to pixels
-//Dialog.create("Dimensions");
-//	Dialog.addNumber("Image Length/Width (nm):", 400);
-//Dialog.show();
-//XYSize = Dialog.getNumber();
+if(square == "No"){
+	//Select .txt file of image y (nm) and extract values into an array
+	filestring2=File.openAsString(ytxt);
+	rows2=split(filestring2, "\n");
+	ys=newArray(rows2.length);
+	for(i=0; i<rows2.length; i++){
+		ys[i]=parseFloat(rows2[i]);
+	}
+}
+else{
+	ys=xs;
+}
 
-//Select location for results folder and create a new folder there
-print("\\Clear");
-print("Select a folder to put the results into");
-dirsavetemp = getDirectory("Select a folder to put the results into");
-dirsave = dirsavetemp + File.getName(dir0) + "_results" + File.separator;
+//Create save directory
+dirsave = dirMain + File.separator + File.getName(dirMain) + "_Results" + File.separator;
 File.makeDirectory(dirsave);
-print("\\Clear");
 
-//YES calculates the half of cumulative fraction of total area later. NO does total number of pores 
+//YES calculates the half of cumulative fraction of total area later. NO does total number of pores. Leave as yes, code no longer functions otherwise
 HCFAYN = "YES";
 
 //Hide all the system processes
 setBatchMode(true);
 
+//Set up final results file
+File.append("Image,Porosity,Exp Coefficient,X0 Depth (nm),Gaussian Width (nm),X0 HCFA (nm^2),X0 Diameter (nm)", dirsave + "Final_Results" + ".csv");
+
 for (g=0; g<list0.length; g++){
-	
 	//Select stack folder and get list of images
 	dir1 = dir0 + list0[g];
 	list = getFileList(dir1);
 	
+	filename = substring(File.getName(dir1), 0, lengthOf(File.getName(dir1))-6);
+	
 	//Create results folder for single stack in the total results folder
-	dir2 = dirsave + File.getName(dir1) + "_results" + File.separator;
+	dir2 = dirsave + filename + "_results" + File.separator;
 	File.makeDirectory(dir2);
 	
-	//YES calculates the half of cumulative fraction of total area later. NO does total number of pores. For whole code to work, must be YES
-	HCFAYN = "YES";
-	
-	//Use depth of image to calculate depth per slice
-	Depth = depths[g];
-	XYSize = xy[g];
-	
-	conversion = XYSize / 520;
-	Conversion = Depth/255;
+	if(saves != "No"){
+		dirlabel = dir2 + "Labelled Images" + File.separator;
+		File.makeDirectory(dirlabel);
+	}
 	
 	number_of_repetitions = list.length - 1;
-	
-	//Hide all the system processes
-	setBatchMode(true);
 	
 	//Create the array for the final result to be stored in and the file to store this in
 	HCFA = newArray(number_of_repetitions+1);
@@ -97,8 +127,10 @@ for (g=0; g<list0.length; g++){
 	headline2 = "Depth_slice_number,Yellow_pores,Green_pores,Magenta_pores,Blue_pores,Total_number_pores";
 	File.append(headline2, dir2 + "ColourCount" + ".csv");
 	
-	
 	for (j = 0; j <= number_of_repetitions; j++) {
+		print("\\Clear");
+		print("Processing stack #" + g+1 + ", " + round(j/(number_of_repetitions+1)*100) + "%");
+		
 		//reset ROI manager, images and results
 		if (roiManager("count")>0) {
 			roiManager("Deselect");
@@ -110,18 +142,28 @@ for (g=0; g<list0.length; g++){
 		//Open image
 		open(dir1 + list[j]);
 		
+		//Use depth of image to calculate depth per slice
+		Depth = depths[g];
+		XSize = xs[g];
+		YSize = ys[g];
+		getDimensions(width, height, channels, slices, frames);
+		XConversion = XSize / width;
+		YConversion = YSize / height;
+		ZConversion = Depth/list.length;
+		
 		//Convert pixels to nm
-		run("Properties...", "channels=1 slices=1 frames=1 unit=nm pixel_width="+conversion+" pixel_height="+conversion+" voxel_depth="+Conversion+"");
+		run("Properties...", "channels=1 slices=1 frames=1 unit=nm pixel_width="+XConversion+" pixel_height="+YConversion+" voxel_depth="+ZConversion+"");
 		
 		//Threshold the image to convert into the right format
 		setAutoThreshold("Otsu dark");
 		
-		//Apply threshold. true puts holes in white, false puts them in black
+		//Apply threshold.
 		setOption("BlackBackground", true);
 		run("Convert to Mask");
 		
 		//Obtain the table using ROIManager, measure
-		run("Analyze Particles...", "size=2-Infinity display include add lable");
+		run("Set Measurements...", "area standard centroid redirect=None decimal=1");
+		run("Analyze Particles...", "size=2-Infinity include add lable");
 		resetThreshold();
 		
 		//Visualise nothing
@@ -175,7 +217,9 @@ for (g=0; g<list0.length; g++){
 			}
 			
 			//Save processed image
-			saveAs("jpeg", dir2+list[j]);
+			if(saves != "No"){
+				saveAs("png", dirlabel+list[j]);
+			}
 			
 			//Allocate the count of pores to the colour arrays and total
 			Yellow[j] = yellow_rois;
@@ -205,7 +249,7 @@ for (g=0; g<list0.length; g++){
 				Total = Total + Area;
 			}
 			
-			slice_pore_volume[j] = Total*Conversion;
+			slice_pore_volume[j] = Total*ZConversion;
 			
 			//Sort the values of area by size (small->large)
 			Sorted = Array.sort(to_sort);
@@ -236,17 +280,19 @@ for (g=0; g<list0.length; g++){
 			}
 			
 			//Create final results table with the raw Area, the sorted area and the cumulative fraction for each slice
-			table1 = "Results_table";
-			Table.create(table1);
-			
-			for (i = 0; i < number_of_rois; i++) {
-				Area = getResult("Area", i);
-				Table.set("Raw Area", i, Area);
-				Table.set("Area Sorted", i, Sorted[i]);
-				Table.set("Cumulative Fraction", i, cum_fraction[i]);
+			if(saves != "No"){
+				table1 = "Results_table";
+				Table.create(table1);
+				
+				for (i = 0; i < number_of_rois; i++) {
+					Area = getResult("Area", i);
+					Table.set("Raw Area", i, Area);
+					Table.set("Area Sorted", i, Sorted[i]);
+					Table.set("Cumulative Fraction", i, cum_fraction[i]);
+				}
+				
+				saveAs("Results", dirlabel + File.nameWithoutExtension + ".csv");
 			}
-			
-			saveAs("Results", dir2 + File.nameWithoutExtension + ".csv");
 		}
 		
 		//If no ROIs, set HCFA = 0
@@ -263,8 +309,8 @@ for (g=0; g<list0.length; g++){
 		
 		//Close random table that keeps appearing every iteration
 		name = File.nameWithoutExtension + ".csv";
-		x = isOpen(name);
-		if(x == true) {
+		isopen = isOpen(name);
+		if(isopen == true) {
 			selectWindow(name);
 			run("Close");
 		}
@@ -308,17 +354,19 @@ for (g=0; g<list0.length; g++){
 	
 	//Obtain xo and FWHM from the Gaussian
 	xo = round(c);
-	//sigma2 = round(2*d);
 	FWHM = round(2.35*d);
 	top_FWHM = xo + round(FWHM/2);
 	bottom_FWHM = xo - round(FWHM/2);
-	volume_in_FWHM = (FWHM*Conversion)*XYSize*XYSize;
+	two_sig = round(4*d);
+	top_two_sig = xo + round(two_sig/2);
+	bottom_two_sig = xo - round(two_sig/2);
+	volume_in_FWHM = (FWHM*ZConversion)*XSize*YSize;
 	FWHM_pore_volume = 0;
 	Error = 0;
 	
 	//add if to make sure this works even if the image does not follow a gaussian fit
 	if(top_FWHM >= number_of_repetitions){
-		top_FWHM = 255;
+		top_FWHM = list.length;
 		Error = 2;
 	}
 	if(bottom_FWHM <= 0){
@@ -332,7 +380,10 @@ for (g=0; g<list0.length; g++){
 		}
 	}
 
+	//Get porosity of the image
 	pore_ratio = FWHM_pore_volume/volume_in_FWHM;
+	
+	//File.append(pore_ratio, dirsave + "Porosities" + ".csv");
 	
 	//Retrieve the HCFA values for xo and FWHM values
 	HCFA_bottom = 0;
@@ -341,6 +392,7 @@ for (g=0; g<list0.length; g++){
 	m=0;
 	
 	for (i = 0; i < DepthArray.length; i++) {
+		//set HCFA value
 		if (DepthArray[i] == xo) {
 			HCFA_xo = HCFA[i];
 		}
@@ -458,16 +510,17 @@ for (g=0; g<list0.length; g++){
 	Diam_top = 2*sqrt(HCFA_top/PI);
 	
 	//Convert depths from slices to nm
-	Depth_nm_bottom = bottom_FWHM*Conversion;
-	Depth_nm_xo = xo*Conversion;
-	Depth_nm_top = top_FWHM*Conversion;
-	
+	Depth_nm_bottom = bottom_FWHM*ZConversion;
+	Depth_nm_xo = xo*ZConversion;
+	Depth_nm_top = top_FWHM*ZConversion;
+	Depth_nm_two_sig_bottom = bottom_two_sig*ZConversion;
+	Depth_nm_two_sig_top = top_two_sig*ZConversion;
 	
 	//Setup file in designated folder
-	contentline3 = " " + "," + "Slice" + "," + "Depth (nm)" + "," + "HCFA" + "," + "Diameter";
-	contentline4 = "Bottom FWHM" + "," + bottom_FWHM + "," + Depth_nm_bottom + "," + HCFA_bottom + "," + Diam_bottom; 
-	contentline5 = "xo" + "," + xo + "," + Depth_nm_xo + "," + HCFA_xo + "," + Diam_xo;
-	contentline6 = "Top FWHM" + "," + top_FWHM + "," + Depth_nm_top + "," + HCFA_top + "," + Diam_top;
+	contentline3 = " " + "," + "Slice" + "," + "Depth in Gaussian (nm)" + "," + "HCFA" + "," + "Diameter";
+	contentline4 = "Bottom FWHM" + "," + bottom_FWHM + "," + Depth_nm_bottom-Depth_nm_two_sig_bottom + "," + HCFA_bottom + "," + Diam_bottom; 
+	contentline5 = "xo" + "," + xo + "," + Depth_nm_xo-Depth_nm_two_sig_bottom + "," + HCFA_xo + "," + Diam_xo;
+	contentline6 = "Top FWHM" + "," + top_FWHM + "," + Depth_nm_top-Depth_nm_two_sig_bottom + "," + HCFA_top + "," + Diam_top;
 	
 	File.append(contentline3, dir2 + "Final" + ".csv");
 	File.append(contentline4, dir2 + "Final" + ".csv");
@@ -499,7 +552,7 @@ for (g=0; g<list0.length; g++){
 	//Log HCFA values as well as converting depth into nm
 	for (i = 0; i < HCFA_FWHM.length; i++) {
 		HCFA_FWHM[i] = log(HCFA_FWHM[i]);
-		DepthArray_FWHM[i] = (DepthArray_FWHM[i]*Conversion);
+		DepthArray_FWHM[i] = ((DepthArray_FWHM[i]-bottom_two_sig)*ZConversion);
 	}
 	
 	//Fit straight line to the log graph in order to get exponential coefficient
@@ -521,7 +574,7 @@ for (g=0; g<list0.length; g++){
 	saveAs(".PNG", dir2+"HCFA_LOG_Graph");
 	
 	//Set up a csv file for the log graph
-	contentlineA = "Depth (nm)" + "," + "log_HCFA (nm^2)";
+	contentlineA = "Depth (nm)" + "," + "log_HCFA";
 	File.append(contentlineA, dir2 + "HCFA_log" + ".csv");
 	for (i = 0; i < HCFA_FWHM.length; i++) {
 		contentlineC = "" + DepthArray_FWHM[i] + "," + HCFA_FWHM[i];
@@ -536,7 +589,40 @@ for (g=0; g<list0.length; g++){
 	//Add exp coefficient to the Final.csv
 	contentlineB = "exp coefficient" + "," + B;
 	File.append("", dir2 + "Final" + ".csv");
-	File.append(contentlineB, dir2 + "Final" + ".csv");	
+	File.append(contentlineB, dir2 + "Final" + ".csv");
+	
+	File.append(filename + "," + pore_ratio + "," + B + "," + Depth_nm_xo-Depth_nm_two_sig_bottom + "," + Depth_nm_two_sig_top-Depth_nm_two_sig_bottom + "," + HCFA_xo + "," + Diam_xo, dirsave + "Final_Results" + ".csv");
+	
+	if(saves == "X0 Slice Only"){
+		listlabel = getFileList(dirlabel);
+		for(a = 0; a < listlabel.length; a++){
+			if(a != (xo*2)+1 && a != (xo*2)){
+				File.delete(dirlabel + listlabel[a]);
+			}
+		}
+		listlabel = getFileList(dirlabel);
+		for(a = 0; a < listlabel.length; a++){
+			open(dirlabel+listlabel[a]);
+			if(endsWith(listlabel[a], "csv")){
+				saveAs("Results", dir2 + "X0_Slice.csv");
+			}
+			if(endsWith(listlabel[a], "png")){
+				saveAs("png", dir2+"X0_Slice.png");
+			}
+			File.delete(dirlabel+listlabel[a]);
+		}
+		File.delete(dirlabel);
+		close("X0_Slice.csv");
+		close("X0_Slice.png");
+	}
 }
+run("Close All");
+print("\\Clear");
+close(name);
+close("Results_table");
+close("Log");
 
-print("Code has finished. Results are in the created folder");
+//Final dialogue
+Dialog.create("");
+Dialog.addMessage("Finished! Thank you for using AFMSlicer :)");
+Dialog.show();
