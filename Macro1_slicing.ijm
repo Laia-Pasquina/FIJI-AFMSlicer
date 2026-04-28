@@ -1,42 +1,97 @@
-
 /*
- * Macro1_Slicing: Converts an AFM image into a stack of binary images and exports the stack in .tiff or .obj format
+ * Convert an AFM image into a stack of binary images
  * 
- * Authors: Dr Laia Pasquina-Lemonche & Matthew Barker, University of Sheffield, UK, 
- * 			
- * Date of Original: 12th May 2020
+ * Authors: Dr Laia Pasquina-Lemonche & Matthew Barker, University of Sheffield, UK
  * 
- * LATEST UPDATE: Automated batch processing to cycle through a full folder of stacks 
- * Date: 25th November 2024
  */
 
 run("Close All");
-print("\\Clear");
 
-//Select folder of images to be processed, retrieve file names and create new folder for the stacks to be saved in
-print("Select folder containing images to be processed");
-dir1 = getDirectory("Select the folder containing images");
+//Retrieve required parameters for the processing
+Dialog.create("");
+Dialog.addMessage("Welcome to AFMSlicer!");
+Dialog.addDirectory("Select folder containing images", "");
+Dialog.addNumber("Number of slices to make from the image (>256 requires 16-bit image)", 256);
+Dialog.addChoice("Represent Pores or Surface? (Pores required for Code 2, Surface for Code 3)", newArray("Pores", "Surface"));
+Dialog.addCheckbox("Are all images square?", false);
+Dialog.addCheckbox("Save filtered? (Required for code 3)", true);
+Dialog.addCheckbox("Save .obj wavefront?", false);
+Dialog.addMessage("Saving .obj wavefront requires selection of .txt files containing depths and xy dimensions in nm");
+
+Dialog.show();
+
+dir1 = Dialog.getString();
+number_slices = Dialog.getNumber();
+represent = Dialog.getChoice();
+square = Dialog.getCheckbox();
+SaveFiltered = Dialog.getCheckbox();
+D3 = Dialog.getCheckbox();
+
 list = getFileList(dir1);
 dir2 = dir1 + File.getName(dir1) + "_Stacks" + File.separator;
 File.makeDirectory(dir2);
 
-//Give the number of slices to cut the image into
-number_slices = getNumber("Number of slices to make from the image (max 255)", 255);
+if (D3 == true){
+	//If saving 3D .obj is selected, create folder to save them in
+	dir3 = dir1 + File.getName(dir1) + "_objs" + File.separator;
+	File.makeDirectory(dir3);
+	
+	Dialog.create("");
+	Dialog.addFile("Select .txt file containing depths in nm", "");
+	if (square == true){
+		Dialog.addFile("Select .txt file containing xy size in nm", "");
+	}
+	if (square == false){
+		Dialog.addFile("Select .txt file containing x size in nm", "");
+		Dialog.addFile("Select .txt file containing y size in nm", "");
+	}
+	Dialog.show();
+	
+	depthtxt = Dialog.getString();
+	xtxt = Dialog.getString();
+	if (square == false){
+		ytxt = Dialog.getString;
+	}
+	
+	//Select .txt file of image depths (nm) and extract values into an array
+	filestring=File.openAsString(depthtxt);
+	rows=split(filestring, "\n");
+	depths=newArray(rows.length);
+	for(i=0; i<rows.length; i++){
+		depths[i]=parseFloat(rows[i]);
+	}
+	
+	//Select .txt file of image x (nm) and extract values into an array
+	filestring1=File.openAsString(xtxt);
+	rows1=split(filestring1, "\n");
+	x=newArray(rows1.length);
+	for(i=0; i<rows1.length; i++){
+		x[i]=parseFloat(rows1[i]);
+	}
+	
+	if(square == false){
+		//Select .txt file of image y (nm) and extract values into an array
+		filestring2=File.openAsString(ytxt);
+		rows2=split(filestring2, "\n");
+		y=newArray(rows2.length);
+		for(i=0; i<rows2.length; i++){
+			y[i]=parseFloat(rows2[i]);
+		}
+	}
+	else{
+		y=x;
+	}
+}
 
-//Choose whether filled area will represent pores or surface
-represent = getBoolean("Represent Pores or Surface? (Pores required for Code 2)", "Pores", "Surface");
+//Create save diretory for filtered images
+dirFilt = dir1 + File.getName(dir1) + "_Filtered" + File.separator;
+File.makeDirectory(dirFilt);
 
-//Ask user if greyscale is required and whether to save filtered image
-GREY = getBoolean("Is your image already in Greyscale colour?");
-
-//Uncomment this line below ("33") and comment line ("34) if you want to ask user about filtered image.
-//SaveFiltered = getBoolean("Do you want to save the filtered image as well?");
-SaveFiltered = false; //The default is to not save this.
-
-print("\\Clear");
-print("Slicing Underway");
+//Hide most processes
+setBatchMode(true);
 
 for (j=0; j<list.length; j++) {
+	run("Close All");
 	
 	//Open image from the list
 	open(dir1 + list[j]);
@@ -50,87 +105,123 @@ for (j=0; j<list.length; j++) {
 	//File name in form image_
 	name3 = File.nameWithoutExtension + "_";
 	
-	//Scale the image down to 520x520
-	run("Scale...", "x=- y=- width=520 height=520 interpolation=Bilinear average create");
+	//set default to 16-bit
+	zdepth = 65535;
 	
-	//If needed, convert to greyscale
-	if(GREY == false) {
+	//If needed, convert from RGB to greyscale
+	if(bitDepth() == 24) {
+		//Change to 8-bit
+		zdepth = 255;
 		
-		//Converts the image to greyscale without missing any data points
-		run("8-bit");
-		run("Grays");
+		//Split channels into RGB
+		run("Split Channels");
+		
+		//find the titles of all images, and then close green and blue
+		titles = newArray(nImages());
+		
+		for(i=1; i<=nImages(); i++) {
+			//Get the titles from the images
+			selectImage(i);
+			titles[i-1] = getTitle();
+			NaM = titles[i-1];
+			
+			//Find Blue channel and close it
+			A = endsWith(NaM, "blue)");
+			if(A == 0) {
+				run("Close");
+			}
+			
+			//Find green channel and close it
+			B = endsWith(NaM, "green)");
+			if(B == "0") {
+				run("Close");
+			}
+		}
 	}
 	
-	//Filter image
+	//Filter image and save
 	run("Despeckle");
-	run("Remove Outliers...", "radius=10 threshold=50 which=Bright");
+	//run("Remove Outliers...", "radius=10 threshold=50 which=Bright");
 	run("Median...", "radius=2");
-	
-	saveAs("tiff", dir1+name1);
+	saveAs("tiff", dirFilt+name1);
 	
 	run("Close All");
 	
-	//Reduces visual outputs
-	setBatchMode(true);
-	
 	for(i = 0; i < number_slices; i++) {
-		//Open greyscale image
-		open(dir1 + name1 + ".tif");
-		
-		//Convert to 8-bit
-		run("8-bit");
-		
-		//Threshold image
-		setAutoThreshold("Otsu");
-		
-		a = 0;
-		b = number_slices - i;
-		
-		setThreshold(a, b);
-		
-		//Apply the threshold. Selecting false makes holes black, true makes them white
-		
-		if (represent == 1) {
-			setOption("BlackBackground", true);
-			run("Convert to Mask");
-		}
-		if (represent == 0) {
-			setOption("BlackBackground", false);
-			run("Convert to Mask");
-		}
+			print("\\Clear");
+			print("Image #" + j+1 + ", " + parseInt(i/number_slices*100) + "% complete");
+			//Open greyscale image
+			open(dirFilt + name1 + ".tif");
+			
+			//Threshold image
+			setAutoThreshold("Otsu");
+			
+			//Reverse threshold depending on requirements
+			if (represent == "Pores") {
+				a = 0;
+				b = zdepth - round((i/number_slices)*zdepth);
+			}
+			if (represent == "Surface") {
+				a = round((i/number_slices)*zdepth);
+				b = zdepth;
+			}
+			
+			setThreshold(a, b);
 	
-	}
+			setOption("BlackBackground", true);
+	
+			run("Convert to Mask");
+		
+		}
 	
 	//Stack images
-	name4 = name2+"_AFMtomography_stack";
+	name4 = name2+"_stack";
 	run("Images to Stack", "title=[] use");
-	rename(name4);
-	saveAs("Tiff", dir1+name4);
 	
-	//Save the stack as Image Sequence for further analysis. Saves in a folder named Filename_stack in stacks folder
-	savepoint = dir2 + name2 + "_stack" + File.separator;
-	File.makeDirectory(savepoint);
-	run("Image Sequence... ", "format=TIFF name="+name3+" digits=3 save=["+savepoint+"]");
-	
-	//If requested, remove filtered image
-	if (SaveFiltered == false) {
-		File.delete(dir1+name1+".tif")
+	//Flip the stack to be top-down
+	if (represent == "surface"){
+		run("Reverse");
 	}
 	
-	/*
-	 //This does not work, this is to download file in .obj
-	//Ask user if they also want to export the image in .obje (recommended for ChimeraX and needed for Blender
-	OBJ = getBoolean("Do you want to also save image in .OBJ format? (recommeded for ChimeraX, needed for Blender)");
-	
-	if(OBJ == true){
-		selectImage(name4+".tif");
-		rename(name4);
-		run("Wavefront .OBJ ...", "stack="+name4+" threshold=0 resampling=2 red green blue save="+dir1+"3D_image");
-	}*/
-	
+	//Save the stack as Image Sequence for further analysis. Saves in a folder named Filename_stack in stacks folder
+	savepoint = dir2 + name2 + "_stack";
+	File.makeDirectory(savepoint);
+	run("Image Sequence... ", "format=TIFF name="+name3+" digits="+lengthOf(""+number_slices)+" save=["+savepoint+"]");
 	
 
+	
+	if (D3 == true){
+		//Save .obj files if requested
+		print("\\Clear");
+		print("Saving .obj for Image #"+j+1);
+		save2 = dir3 + name2 + "_3D" + ".obj";
+		selectWindow("Stack");
+		getDimensions(width, height, channels, slices, frames);
+		run("Properties...", "channels=1 slices="+number_slices+" frames=1 pixel_width="+x[j]/width+" pixel_height="+y[j]/height+" voxel_depth="+depths[j]/number_slices+"");
+		run("Wavefront .OBJ ...", "stack=Stack threshold=50 resampling=2 red green blue save=["+save2+"]");
+	}
+}
+	
+if (SaveFiltered == false) {
+	//Delete filtered image (and folder) if not needed
+	listFilt = getFileList(dirFilt);
+	for(a = 0; a < listFilt.length; a++){
+		File.delete(dirFilt + listFilt[a]);
+	}
+	File.delete(dirFilt);
 }
 
+//Close everything
 print("\\Clear");
-print("Stacking complete");
+run("Close All");
+wlist=getList("window.titles");
+wlength=lengthOf(wlist);
+for (i=0; i<wlength; i++) {
+	selectWindow(wlist[i]);
+	run("Close");
+}
+
+//Final dialogue
+Dialog.create("");
+Dialog.addMessage("Finished! Thank you for using AFMSlicer :)");
+Dialog.show();
