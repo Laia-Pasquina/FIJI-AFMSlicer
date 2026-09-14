@@ -5,6 +5,7 @@
  * 			
  */
 
+//Ensure everything is closed
 run("Close All");
 run("Clear Results");
 print("\\Clear");
@@ -16,12 +17,14 @@ for (i=0; i<wlength; i++) {
 	run("Close");
 }
 
+//Ask whether images are square to know how many .txt files to ask for
 Dialog.create("");
 Dialog.addRadioButtonGroup("Are all of your images square?", newArray("Yes", "No"), 1, 2, "Yes");
 Dialog.show();
 
 square = Dialog.getRadioButton();
 
+//Ask for dimensions of images, preferences of analysis method, and files to be saved
 Dialog.create("");
 Dialog.addDirectory("Select folder to process", "");
 Dialog.addFile("Select .txt file containing depths in nm", "");
@@ -56,12 +59,15 @@ save_segmented = Dialog.getCheckbox();
 save_labelled = Dialog.getCheckbox();
 save_volume = Dialog.getCheckbox();
 
+//Obtain directories of images to analyse - works off the file structure created by code 1
 dir0 = dirMain + File.separator + File.getName(dirMain) + "_Stacks" + File.separator;
 list0 = getFileList(dir0);
 
 dirFilt = dirMain + File.separator + File.getName(dirMain) + "_Filtered" + File.separator;
 listFilt = getFileList(dirFilt);
 
+
+//Create folders for saving images and data requested
 if (save_segmented == true){
 	File.makeDirectory(dirMain + File.separator + File.getName(dirMain) + "_SegmentedStacks");
 }
@@ -121,8 +127,11 @@ for (g=0; g<list0.length; g++){
 	dir1 = dir0 + list0[g];
 	list = getFileList(dir1);
 	number_slices = list.length;
+	
+	//Generate base name of save files
 	dirname = substring(File.getName(dir1),0,lengthOf(File.getName(dir1))-6);
 	
+	//Create sub-save folders for each image
 	dirsegsave = dirMain + File.separator + File.getName(dirMain) + "_LabelledStacks" + File.separator + dirname + "_SegmentedLabelled" + File.separator;
 	File.makeDirectory(dirsegsave);
 	
@@ -209,6 +218,7 @@ for (g=0; g<list0.length; g++){
 	
 	setColor(255);
 
+	//Generate image of seeds of objects
 	newImage("Seeds", "8-bit black", width, height, 1);
 	l=4;
 	for (j = 0; j < x_pos.length; j++) {
@@ -217,16 +227,21 @@ for (g=0; g<list0.length; g++){
 		}
 	}
 	//saveAs("tiff", dirMain + "seeds");
+	
+	//Convert to single pixels
 	run("Find Maxima...", "prominence=200 output=[Single Points]");
 	
+	//Rename Image
 	selectImage("Seeds Maxima");
 	//saveAs("tiff", dirMain + "seeds");
 	rename("Maxima");
 	
+	//Open Filtered image from Code 1
 	open(dirFilt + listFilt[g]);
 	rename("filtered");
 	//saveAs("tiff", dirMain + "FilterCheck");
 	
+	//Run 3D watershed - IF WATERSHED IS CONSTANTLY TOO HIGH OR TOO LOW, ADJUST IMAGE_THRESHOLD HERE
 	if(bitDepth() == 16){
 		run("3D Watershed", "seeds_threshold=1 image_threshold=10000 image=filtered seeds=Maxima radius=2");
 	}
@@ -239,6 +254,7 @@ for (g=0; g<list0.length; g++){
 	
 	setBatchMode(false);
 	
+	//Generate ROIs from the watershed image
 	selectImage("watershed");
 	run("Label image to composite ROIs");
 	roiManager("Show None");
@@ -246,6 +262,7 @@ for (g=0; g<list0.length; g++){
 	setBatchMode(true);
 	raw_number_of_WSrois = roiManager("count");
 	
+	//Remove any ROIs touching the edge of the image
 	getDimensions(width, height, channels, slices, frames);
 	for(i=roiManager("count");i>0;i--){
 		roiManager("select", i-1);
@@ -254,6 +271,7 @@ for (g=0; g<list0.length; g++){
 	}
 	number_of_WSrois = roiManager("count");
 	
+	//Label each cell on filtered image - number associates with number is results csv file
 	open(dirFilt + listFilt[g]);
 	rename("filtered_temp");
 	for(i=0; i<number_of_WSrois; i++){
@@ -277,6 +295,7 @@ for (g=0; g<list0.length; g++){
 	
 	//labels = newArray(number_of_WSrois);
 	
+	//Measure areas of all ROIs to know when watershed is hit
 	run("Set Measurements...", "area centroid redirect=None decimal=1");
 	roiManager("deselect");
 	roiManager("measure");
@@ -284,6 +303,7 @@ for (g=0; g<list0.length; g++){
 	close("Results");
 	//roiManager("Save", roisavepoint + "WSROI.zip");
 	
+	//Inverse watershed to subtract from each slice
 	setAutoThreshold("Otsu dark");
 	setThreshold(1, 65535, "raw");
 	setOption("BlackBackground", true);
@@ -302,6 +322,7 @@ for (g=0; g<list0.length; g++){
 		run("Clear Results");
 		print("\\Clear");
 		
+		//Print progress
 		if(volume_method == "Top 50% of Image"){
 			print("Analysing stack #" + g+1 + ", " + parseInt(2*j/list.length*100) + "% complete");
 		}
@@ -309,8 +330,10 @@ for (g=0; g<list0.length; g++){
 			print("Analysing stack #" + g+1 + ", " + parseInt(j/list.length*100) + "% complete");
 		}
 		
+		//Reset whether all objects at watershed depth
 		all_matched = false;
 		
+		//Skip bottom half of image for top 50%
 		if(volume_method == "Top 50% of Image"){
 			for(k=0; k<number_of_WSrois; k++){
 				if (j < list.length/2){
@@ -323,6 +346,7 @@ for (g=0; g<list0.length; g++){
 			}
 		}
 		
+		//Check if each object has hit watershed area, and break if so
 		else{
 			for(k=0; k<number_of_WSrois; k++){
 				if (check_filled[k] == 0){
@@ -336,6 +360,7 @@ for (g=0; g<list0.length; g++){
 		}
 		
 		if(all_matched == false) {
+			//Open slice and subtract watershed
 			open(dir1 + list[j]);
 			name = getTitle();
 			imageCalculator("Subtract create", name, "watershed_inverted");
@@ -345,22 +370,28 @@ for (g=0; g<list0.length; g++){
 				saveAs("tiff", BWdirsegsave+savename+"_Segmented");
 			}
 			name2 = getTitle();
+			
+			//Measure area and centroid position of each object
 			run("Set Measurements...", "area centroid redirect=None decimal=1");
 			run("Analyze Particles...", "size=1-Infinity include add label");
 			roiManager("Show None");
 			
+			//Check any objects are present, and calculate number of them. Then apply labels to each
 			if (roiManager("count")>number_of_WSrois) {
 				number_of_labels = roiManager("count")-number_of_WSrois;
 				run("Connected Components Labeling", "connectivity=4 type=[8 bits]");
 				name1 = getTitle();
 				
+				//Find coordinates and label of each object
 				for(l=0; l<number_of_labels; l++) {
 					x_posi = round(getResult("X", l));
 					y_posi = round(getResult("Y", l));
 					pix_value = getPixel(x_posi, y_posi);
 					
+					//Get area of object
 					area = getResult("Area", l);
 					
+					//If pixel value = 0 (can happen if only single pixel point), search nearby pixels to locate label
 					if (pix_value == 0) {
 						for (a=-1; a<=1; a++){
 							for (b=-1; b<=1; b++){
@@ -377,6 +408,7 @@ for (g=0; g<list0.length; g++){
 						}
 					}
 					
+					//Reassign label to the same value throughout the stack. Then add volume (area x slice depth) to an array to sum later, and update final radius, so that the last run gives the last radius
 					for(k=0; k < number_of_WSrois; k++){
 						roiManager("select", k);
 						contained = Roi.contains(x_posi, y_posi);
@@ -394,17 +426,21 @@ for (g=0; g<list0.length; g++){
 							break;
 						}
 					}
+					//If object is not within already defined objects, remove label
 					if (contained == false) {
 						run("Replace/Remove Label(s)", "label(s)="+pix_value+" final=0");
 					}
 				}
-	
+				
+				//Remove extra items from ROI Manager - leaving only the ROIs from the original image
 				run("Remove Overlay");
 				roiManager("Deselect");
 				for (i=0; i<number_of_labels; i++){
 					roiManager("select", roiManager("count")-1);
 					roiManager("delete");
 				}
+				
+				//Save labelled image, and close everything
 				saveAs("tiff", dirsegsave+savename+"_Labelled");
 				close();
 				close(name);
@@ -413,6 +449,7 @@ for (g=0; g<list0.length; g++){
 				close("Result of " + name);
 			}
 			else{
+				//If no detected objects, save image and move on
 				run("Remove Overlay");
 				saveAs("tiff", dirsegsave+savename+"_Labelled");
 				if (save_segmented == true){
@@ -424,6 +461,7 @@ for (g=0; g<list0.length; g++){
 			end_slice = j;
 		}
 		
+		//If all matched already true, save previous image with updated name to finish the stack
 		if (volume_method == "Total Apparent Volume"){
 			if (all_matched == true) {
 				if(save_labelled == true){
@@ -513,12 +551,13 @@ for (g=0; g<list0.length; g++){
 	print("\\Clear");
 	print("Compiling data for stack #"+g+1+", please be patient. This may take a while if doing a lot of slices and/or pixels");
 	
+	//Open labelled stack, assign dimensions and calculate volume
 	File.openSequence(dirsegsave);
 	getDimensions(width, height, channels, slices, frames);
 	run("Properties...", "channels=1 slices="+slices+" frames=1 pixel_width="+XSize/width+" pixel_height="+YSize/height+" voxel_depth="+Depth/list.length+"");
 	run("Analyze Regions 3D", "volume euler_connectivity=6");
 	
-	//if(volume_method == "Total Apparent Volume"){
+	//Remove any stray objects that sometimes appear
 	rows_to_delete = 0;
 	for(i=0; i<Table.size; i++) {
 		value = parseFloat(Table.getString("Label", i));
@@ -532,6 +571,8 @@ for (g=0; g<list0.length; g++){
 	if(rows_to_delete > 0) {
 		Table.deleteRows(0, rows_to_delete-1);
 	}
+	
+	//Save volumes as csv
 	Table.save(dirMain + File.separator + File.getName(dirMain) + "_Volumecsvs" + File.separator + dirname + "_Results" + ".csv");
 	//}
 	//else{
@@ -541,6 +582,7 @@ for (g=0; g<list0.length; g++){
 	//	//saveAs("Results", dirMain + File.separator + File.getName(dirMain) + "_Volumecsvs" + File.separator + "final_volumes" + g + ".csv");
 	//}
 	
+	//If requested, reassign labels of objects sorted by volume
 	if(save_volume == true){
 	
 		final_volumes = Table.getColumn("Volume");
@@ -574,6 +616,7 @@ for (g=0; g<list0.length; g++){
 	run("Clear Results");
 	print("\\Clear");
 	
+	//If not wanting to save labelled images, delete them to save storage
 	if (save_labelled == false) {
 		list_todelete = getFileList(dirsegsave);
 		for(a = 0; a < list_todelete.length; a++){
@@ -583,13 +626,13 @@ for (g=0; g<list0.length; g++){
 	}
 }
 
-//if(save_labelled == false && save_segmented == false && save_volume == false){
-//	File.delete(dirMain + File.separator + File.getName(dirMain) + "_SegmentedStacks");
-//
+//If not wanted to save labelled, delete folder created for them
 if(save_labelled == false){
 	File.delete(dirMain + File.separator + File.getName(dirMain) + "_LabelledStacks");
 }
 
+
+//Close all and end!
 run("Close All");
 run("Clear Results");
 print("\\Clear");
