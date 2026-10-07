@@ -21,7 +21,8 @@ The resultant image can then be further analysed using **Macro 2** or **Macro 3*
 This code analyses properties of the pores in each of the 2D slices and then outputs a list of 
 values for each slice. It then produces a summary of the HCFA (Half cumulative fraction of Area) for the entire image.
 These results were used to create the graphs of CFA vs Area in the [Science Publication](https://doi.org/10.1126/science.adn1369). 
-Porosity of the material is also calculated.
+Porosity of the material is also calculated. 
+Macro 2 only functions effectively if used on a levelled image with clear porous properties. See the example dataset for references.
 
 **Macro 3: Volume Analysis**
 
@@ -32,7 +33,7 @@ This code analyses the volume of objects on a surface in an AFM image.
 1. These are **FIJI macros**, so the first step is to **Download and Install FIJI**, [here](https://imagej.net/downloads).
 2. The following update sites are required within FIJI: **ImageJ**, **FIJI**, **Java-8**, **3D ImageJ Suite**, **IBMP-CNRS**, **IJPB-plugins**, **ImageScience**, **PTBIOP**. 
 3. The code is currenlty composed of Macro 1, Macro 2 and Macro 3. Macro 1 should always be run first, followed by macro 2 for pore analysis, or macro 3 for volume analysis.
-4. The imput file should be an AFM height image in .tif format extracted preferably from open-source software like Gwyddion or TopoStats, but other non-open source formats are accepted too. 
+4. The input file should be an AFM height image in .tif format extracted preferably from open-source software like Gwyddion or TopoStats, but other non-open source formats are accepted too. 
 5. **IMPORTANT**  `The imput image should not have any scale bar, colour bar or any additional drawing, just the image without any edges` e.g. in Gwyddion you can do this by following these instructions: _File > Save as > File type (.TIFF) > Export Tiff window > Lateral scale (None) > Value scale (None) > Image draw frame (unticked)_
 6. For each set of images being run, you will need a .txt file for each of the xy dimensions, and for the z-range of the images. See Example_xy.txt and Example_depths.txt for how to set up this data.
 7. Open Macro 1 in FIJI and click **Run**, follow the instructions in the popup windows. Slice number should be optimised to your datasets, but we recommend 2 nm z-resolution for volumes, and 0.1 nm resolution for pores
