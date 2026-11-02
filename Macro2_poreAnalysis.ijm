@@ -268,7 +268,7 @@ for (g=0; g<list0.length; g++){
 				
 				if (HCFAYN == "YES") {
 					//Calculate half of the cumulative fraction of the total area (HCFA) nm^2
-					if (cum_fraction[i] > 0.4 && cum_fraction[i] < 0.55) {
+					if (Math.sqr(0.5-cum_fraction[i])<Math.sqr(0.5-cum_fraction[i-1])) {
 						HCFA_in = i;
 						HCFA[j] = Sorted[HCFA_in];
 					}
