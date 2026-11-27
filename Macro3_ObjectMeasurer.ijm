@@ -38,7 +38,8 @@ if (square == "No") {
 	Dialog.addFile("Select .txt file containing y size in nm", "");
 }
 
-Dialog.addRadioButtonGroup("How should volume be calculated?", newArray("To Watershed", "Top 50% of Image", "Total Apparent Volume"), 3, 1, "To Watershed");
+Dialog.addRadioButtonGroup("How should volume be calculated?", newArray("Top 50% of Image", "Total Apparent Volume"), 3, 1, "To Watershed"); // Options on how to calculate volume (Top 50% recommended for simetrical objects), Total Apparent Volume (recommended for non-simetrical)
+//Dialog.addRadioButtonGroup("How should volume be calculated?", newArray("To Watershed", "Top 50% of Image", "Total Apparent Volume"), 3, 1, "To Watershed");
 Dialog.addMessage("Image save options:");
 Dialog.addCheckbox("Numbered image", false);
 Dialog.addCheckbox("Segmented Stack", false);
