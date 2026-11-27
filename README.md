@@ -13,7 +13,7 @@ interpreted by most 3D visualisation software like Blender or Imaris.
 
 **Macro 1: Slicing:**
 
-This code allows typical AFM images to be sliced into a stack of binary 2D slices. 
+This code allows typical AFM images to be sliced into a stack of binary 2D `Z slices` (user choice, max. 2100 approximate depending on computer specs). 
 The resultant image can then be further analysed using **Macro 2** or **Macro 3**. 
 
 **Macro 2: Pore Analysis:**
@@ -29,6 +29,10 @@ Macro 2 only functions effectively if used on a levelled image with clear porous
 This code reads the stack of slices from Macro 1, then performs a customised Watershed routine adapted for AFM height images (flat background with objects on top). 
 Then it performs a custom connect components routine to connect the objects across slices and creates labels to separate each individual object using the watershed outline.
 Finally, the morphology of the objects can be analysed in 3D. At the moment it calculates the volume of these objects using MorphoLibJ plugin [[2](https://doi.org/10.1093/bioinformatics/btw413).]
+
+The volume calculation can be made in two ways: 
+- `To the 50% of Watershed`: Meaning the volume of the object will start to be calculated from the location of the maxima pixel, and it will continue calculating until it reaches the 50% of the watershed contourn.
+- `Total apparent volume`: The volume of the object will be calculated for the full span of the stack of slices (after removal of slices corresponding to flat background which would).
 
 ## Steps to follow 
 
