@@ -37,7 +37,7 @@ The volume calculation can be made in two ways:
 ## Steps to follow 
 
 1. These are **FIJI macros**, so the first step is to **Download and Install FIJI**, [here](https://imagej.net/downloads).
-2. The following update sites are required within FIJI: **ImageJ**, **FIJI**, **Java-8**, **3D ImageJ Suite**, **IBMP-CNRS**, **IJPB-plugins**, **ImageScience**, **PTBIOP**. 
+2. The following update sites are required within FIJI: **ImageJ**, **FIJI**, **Java-8**, **3D ImageJ Suite**, **IBMP-CNRS**, **IJPB-plugins**, **ImageScience**, **PTBIOP**.  (Help › Update… / Click on Manage update sites.)
 3. The code is currenlty composed of Macro 1, Macro 2 and Macro 3. Macro 1 should always be run first, followed by macro 2 for pore analysis, or macro 3 for volume analysis.
 4. The input file should be an AFM height image in .tif format extracted preferably from open-source software like Gwyddion or TopoStats, but other non-open source formats are accepted too. 
 5. **IMPORTANT**  `The imput image should not have any scale bar, colour bar or any additional drawing, just the image without any edges` e.g. in Gwyddion you can do this by following these instructions: _File > Save as > File type (.TIFF) > Export Tiff window > Lateral scale (None) > Value scale (None) > Image draw frame (unticked)_
@@ -50,5 +50,5 @@ The volume calculation can be made in two ways:
 Follow **AFMSlicer tutorial video** for a detail step-by-step use of the two codes to analyse an image of AFM containing pores.
 
 
-This is the original workflow of AFMSlicer (FIJI macro collection), for the Python version visit:  [https://github.com/AFM-SPM/AFMSlicer](https://github.com/AFM-SPM/AFMSlicer) 
-and see additional [AFMSlicer python Documentation](https://afm-spm.github.io/AFMSlicer/) with instructions for the Python installation. 
+This is the original workflow of AFMSlicer (FIJI macro collection), for the **Python version** visit:  [https://github.com/AFM-SPM/AFMSlicer](https://github.com/AFM-SPM/AFMSlicer) 
+and see additional **[AFMSlicer python Documentation](https://afm-spm.github.io/AFMSlicer/)** with instructions for the Python installation. 
