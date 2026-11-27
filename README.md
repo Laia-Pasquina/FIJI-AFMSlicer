@@ -1,4 +1,4 @@
-# AFM_Slicer
+# AFMSlicer
 
 **Location:** School of Mathematical and Physical Sciences, University of Sheffield, UK. and School of Biosciences, University of Sheffield, UK.
 **Updated:** April 2026 Dr Laia Pasquina Lemonche (https://github.com/Laia-Pasquina) and Matthew J Barker (https://github.com/Mjbarker2) (cc)
@@ -7,13 +7,13 @@
 
 The typical representation of AFM images is a collection of points in a 3D matrix. 
 However, they cannot be directly analysed in 3D as the currently available software is
-very limited and is designed to analyse features in 2D. Here, a collection of FIJI macros 
+very limited and is designed to analyse features in 2D. Here, a collection of FIJI macros [[1](https://www.nature.com/articles/nmeth.2019.pdf)]
 were made to slice and analyse AFM images into tomography-like stacks that can be read and 
 interpreted by most 3D visualisation software like Blender or Imaris.
 
 **Macro 1: Slicing:**
 
-This code allows typical AFM images to be sliced into a stack of binary 2D slices. 
+This code allows typical AFM images to be sliced into a stack of binary 2D `Z slices` (user choice, max. 2100 approximate depending on computer specs). 
 The resultant image can then be further analysed using **Macro 2** or **Macro 3**. 
 
 **Macro 2: Pore Analysis:**
@@ -24,21 +24,31 @@ These results were used to create the graphs of CFA vs Area in the [Science Publ
 Porosity of the material is also calculated. 
 Macro 2 only functions effectively if used on a levelled image with clear porous properties. See the example dataset for references.
 
-**Macro 3: Volume Analysis**
+**Macro 3: Object Analysis**
 
-This code analyses the volume of objects on a surface in an AFM image.
+This code reads the stack of slices from Macro 1, then performs a customised Watershed routine adapted for AFM height images (flat background with objects on top). 
+Then it performs a custom connect components routine to connect the objects across slices and creates labels to separate each individual object using the watershed outline.
+Finally, the morphology of the objects can be analysed in 3D. At the moment it calculates the volume of these objects using MorphoLibJ plugin [[2](https://doi.org/10.1093/bioinformatics/btw413).]
+
+The volume calculation can be made in two ways: 
+- `To the 50% of Watershed`: Meaning the volume of the object will start to be calculated from the location of the maxima pixel, and it will continue calculating until it reaches the 50% of the watershed contourn.
+- `Total apparent volume`: The volume of the object will be calculated for the full span of the stack of slices (after removal of slices corresponding to flat background which would).
 
 ## Steps to follow 
 
 1. These are **FIJI macros**, so the first step is to **Download and Install FIJI**, [here](https://imagej.net/downloads).
-2. The following update sites are required within FIJI: **ImageJ**, **FIJI**, **Java-8**, **3D ImageJ Suite**, **IBMP-CNRS**, **IJPB-plugins**, **ImageScience**, **PTBIOP**. 
+2. The following update sites are required within FIJI: **ImageJ**, **FIJI**, **Java-8**, **3D ImageJ Suite**, **IBMP-CNRS**, **IJPB-plugins**, **ImageScience**, **PTBIOP**.  (Help › Update… / Click on Manage update sites.)
 3. The code is currenlty composed of Macro 1, Macro 2 and Macro 3. Macro 1 should always be run first, followed by macro 2 for pore analysis, or macro 3 for volume analysis.
 4. The input file should be an AFM height image in .tif format extracted preferably from open-source software like Gwyddion or TopoStats, but other non-open source formats are accepted too. 
 5. **IMPORTANT**  `The imput image should not have any scale bar, colour bar or any additional drawing, just the image without any edges` e.g. in Gwyddion you can do this by following these instructions: _File > Save as > File type (.TIFF) > Export Tiff window > Lateral scale (None) > Value scale (None) > Image draw frame (unticked)_
-6. For each set of images being run, you will need a .txt file for each of the xy dimensions, and for the z-range of the images. See Example_xy.txt and Example_depths.txt for how to set up this data.
+6. For each set of images being run, you will need a .txt file for each of the xy dimensions, and for the z-range of the images. See Example_xy.txt and Example_depths.txt for how to set up this data (measure in Gwyddion)
 7. Open Macro 1 in FIJI and click **Run**, follow the instructions in the popup windows. Slice number should be optimised to your datasets, but we recommend 2 nm z-resolution for volumes, and 0.1 nm resolution for pores
 8. For pore analysis, run Macro 2 and selecct the same folder of images that you selected for Macro 1, followed by your xy and depth .txt files.
 9. For volume analysis, run Macro 3 and select the same folder of images that you selected for Macro 1 followed by your xy and depth .txt files.
 10. The results can be found in the Results folder.
 
 Follow **AFMSlicer tutorial video** for a detail step-by-step use of the two codes to analyse an image of AFM containing pores.
+
+
+This is the original workflow of AFMSlicer (FIJI macro collection), for the **Python version** visit:  [https://github.com/AFM-SPM/AFMSlicer](https://github.com/AFM-SPM/AFMSlicer) 
+and see additional **[AFMSlicer python Documentation](https://afm-spm.github.io/AFMSlicer/)** with instructions for the Python installation. 
