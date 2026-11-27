@@ -7,7 +7,7 @@
 
 The typical representation of AFM images is a collection of points in a 3D matrix. 
 However, they cannot be directly analysed in 3D as the currently available software is
-very limited and is designed to analyse features in 2D. Here, a collection of FIJI macros [1](https://www.nature.com/articles/nmeth.2019.pdf)
+very limited and is designed to analyse features in 2D. Here, a collection of FIJI macros [[1](https://www.nature.com/articles/nmeth.2019.pdf)]
 were made to slice and analyse AFM images into tomography-like stacks that can be read and 
 interpreted by most 3D visualisation software like Blender or Imaris.
 
@@ -26,8 +26,9 @@ Macro 2 only functions effectively if used on a levelled image with clear porous
 
 **Macro 3: Object Analysis**
 
-This code reads the stack of slices from Macro 1, then performs a customised Watershed routine adapted for AFM height images (including flat background with objects on top). 
-Then it performs a connect components routine to connect the slices and creates labels to separate each individual object to then analyse the volume of these objects using MorphoLibJ plugin [2](https://doi.org/10.1093/bioinformatics/btw413).
+This code reads the stack of slices from Macro 1, then performs a customised Watershed routine adapted for AFM height images (flat background with objects on top). 
+Then it performs a custom connect components routine to connect the objects across slices and creates labels to separate each individual object using the watershed outline.
+Finally, the morphology of the objects can be analysed in 3D. At the moment it calculates the volume of these objects using MorphoLibJ plugin [[2](https://doi.org/10.1093/bioinformatics/btw413).]
 
 ## Steps to follow 
 
