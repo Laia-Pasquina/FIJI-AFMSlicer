@@ -11,6 +11,8 @@ very limited and is designed to analyse features in 2D. Here, a collection of FI
 were made to slice and analyse AFM images into tomography-like stacks that can be read and 
 interpreted by most 3D visualisation software like Blender or Imaris.
 
+This is the original workflow of AFMSlicer (which is a FIJI macro collection), for the Python version visit: [AFMSlicer python Documentation](https://afm-spm.github.io/AFMSlicer/) 
+
 **Macro 1: Slicing:**
 
 This code allows typical AFM images to be sliced into a stack of binary 2D `Z slices` (user choice, max. 2100 approximate depending on computer specs). 
